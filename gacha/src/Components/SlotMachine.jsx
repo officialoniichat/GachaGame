@@ -5,6 +5,7 @@ import { useAnimation } from '../hooks/useAnimation';
 import { useSlotAnimation } from '../hooks/useSlotAnimation';
 import Reel from './Reel';
 import WinnerDisplay from './WinnerDisplay';
+import SpinningWheel from './SpinningWheel/SpinningWheel';
 import Leaderboard from './Leaderboard';
 import PrizeShowcase from './PrizeShowcase';
 import PatternGuide from './PatternGuide';
@@ -35,6 +36,9 @@ function SlotMachine() {
   const [winner, setWinner] = useState('');
   const [gems, setGems] = useState(10000);
   const [spacebarPressed, setSpacebarPressed] = useState(false);
+  const [showSpinningWheel, setShowSpinningWheel] = useState(false);
+  const [scatterState, setScatterState] = useState({ scatterPositions: new Map(), teasingColumns: new Set() });
+  
   const buttonSpaceBar = useRef();
   const spinControlRef = useRef(null);
   
@@ -65,6 +69,7 @@ function SlotMachine() {
     playSpinSound();
     setIsWin(false);
     setIsSpinning(true);
+    setScatterState({ scatterPositions: new Map(), teasingColumns: new Set() });
 
     const reels = [
       document.querySelectorAll(".reel1"),
@@ -75,14 +80,16 @@ function SlotMachine() {
     spinControlRef.current = animateReels(
       reels,
       updateReelContent,
-      (totalWins, combos) => {
+      (totalWins, combos, newScatterState) => {
         setIsSpinning(false);
+        setScatterState(newScatterState);
+        
         if (totalWins > 0) {
           setIsWin(true);
           if (totalWins === 'mega') {
             setWinner('MegaWinner');
           } else if (totalWins > 1) {
-            setWinner('BigWinner');
+            setShowSpinningWheel(true);
           } else {
             setWinner('Winner1');
           }
@@ -126,9 +133,7 @@ function SlotMachine() {
   return (
     <main className="min-h-screen bg-gradient-to-b from-purple-900 via-purple-800 to-pink-800">
       <div className="relative min-h-screen overflow-y-auto">
-        {/* Background Characters with fixed positioning */}
         <div className="fixed inset-0 opacity-30 pointer-events-none">
-          {/* Desktop: Show both characters */}
           <img 
             src="https://imagedelivery.net/80ncJPif6mMa3mEeTHej8g/27cbc2d2-3366-4102-d3a6-1e159cae6500/mobile" 
             alt="Character 1"
@@ -139,7 +144,6 @@ function SlotMachine() {
             alt="Character 2"
             className="fixed right-0 h-full object-contain md:block hidden"
           />
-          {/* Mobile: Show only one character centered */}
           <img 
             src="https://imagedelivery.net/80ncJPif6mMa3mEeTHej8g/bf4efd1e-ed21-4c43-b72e-a234b5574a00/mobile" 
             alt="Character"
@@ -147,22 +151,18 @@ function SlotMachine() {
           />
         </div>
 
-        {/* Game Content */}
         <div className="relative z-10 container mx-auto px-4 py-8">
           <div className="flex flex-col items-center space-y-6">
             <WinnerDisplay isWin={isWin} winner={winner} />
             
-            {/* Prize Showcase */}
             <div className="w-full max-w-md">
               <PrizeShowcase />
             </div>
 
-            {/* Pattern Guide */}
             <div className="w-full max-w-md">
               <PatternGuide />
             </div>
 
-            {/* Gem Counter */}
             <div className="flex items-center bg-black/30 backdrop-blur-md rounded-full px-3 py-1 shadow-lg">
               <img 
                 src="https://imagedelivery.net/80ncJPif6mMa3mEeTHej8g/d4824501-1568-453e-6760-c5370144e400/small" 
@@ -172,25 +172,36 @@ function SlotMachine() {
               <span className="text-white text-lg font-bold">{gems.toLocaleString()}</span>
             </div>
 
-            {/* Slot Container */}
             <div className="w-full max-w-[384px] sm:max-w-[384px] mx-auto">
-              <div 
-                className="overflow-hidden backdrop-blur-md bg-white/10 rounded-2xl p-2 shadow-2xl slot-container"
-              >
+              <div className="overflow-hidden backdrop-blur-md bg-white/10 rounded-2xl p-2 shadow-2xl slot-container">
                 <table className='relative mx-auto w-full'>
                   <tbody>
                     {reels.map((reelRow, i) => (
                       <tr key={i}>
-                        <Reel className="reel1" symbol={reelRow.reel1} />
-                        <Reel className="reel2" symbol={reelRow.reel2} />
-                        <Reel className="reel3" symbol={reelRow.reel3} />
+                        <Reel 
+                          className="reel1" 
+                          symbol={reelRow.reel1} 
+                          showGoldenBox={scatterState.scatterPositions.has(`0-${i}`)}
+                          isTeasing={scatterState.teasingColumns.has(0)}
+                        />
+                        <Reel 
+                          className="reel2" 
+                          symbol={reelRow.reel2} 
+                          showGoldenBox={scatterState.scatterPositions.has(`1-${i}`)}
+                          isTeasing={scatterState.teasingColumns.has(1)}
+                        />
+                        <Reel 
+                          className="reel3" 
+                          symbol={reelRow.reel3} 
+                          showGoldenBox={scatterState.scatterPositions.has(`2-${i}`)}
+                          isTeasing={scatterState.teasingColumns.has(2)}
+                        />
                       </tr>
                     ))}
                   </tbody>
                 </table>
               </div>
 
-              {/* Play Button */}
               <div className="text-center mt-4">
                 <Button 
                   ref={buttonSpaceBar}
@@ -253,13 +264,20 @@ function SlotMachine() {
               </div>
             </div>
 
-            {/* Leaderboard */}
             <div className="w-full">
               <Leaderboard onToggleMusic={toggleMusic} isMusicEnabled={isMusicEnabled} />
             </div>
           </div>
         </div>
       </div>
+
+      <SpinningWheel 
+        isVisible={showSpinningWheel}
+        onComplete={(totalSpins) => {
+          setShowSpinningWheel(false);
+          console.log(`Won ${totalSpins} free spins!`);
+        }}
+      />
     </main>
   );
 }

@@ -1,5 +1,5 @@
 import React from 'react';
-import SlotMachine from './components/SlotMachine.jsx';
+import SlotMachine from './Components/SlotMachine.jsx';
 
 function App() {
   return (
