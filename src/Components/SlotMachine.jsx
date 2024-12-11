@@ -211,9 +211,10 @@ function SlotMachine() {
 
   function spin() {
     return new Promise((resolve) => {
-      // Bestehenden Code beibehalten, z. B. Sprites entfernen
-      document.querySelectorAll("div[style*='fixed']").forEach((sprite) => sprite.remove());
-  
+      document.querySelectorAll("div[style*='fixed']").forEach((sprite) => {
+        sprite.remove();
+      });
+
       playSpinSound();
       setIsSpinning(true);
       setIsAnimating(true);
@@ -222,66 +223,25 @@ function SlotMachine() {
         scatterPositions: new Map(),
         teasingColumns: new Set(),
       });
-  
+
       const reels = [
         document.querySelectorAll('.reel1'),
         document.querySelectorAll('.reel2'),
         document.querySelectorAll('.reel3'),
       ];
-  
-      const scatterSymbol = SYMBOLS.find((s) => s.alt === 'scatter');
-      const nonScatterSymbols = SYMBOLS.filter((s) => s.alt !== 'scatter');
-  
-      // Falls kein Scatter gefunden wurde, abbrechen/loggen
-      if (!scatterSymbol) {
-        console.error("Es wurde kein einziges Scatter-Symbol in SYMBOLS gefunden!");
-        return;
-      }
-  
-      // Falls keine Non-Scatter-Symbole existieren
-      if (nonScatterSymbols.length === 0) {
-        console.error("Es existieren keine Nicht-Scatter-Symbole. Bitte SYMBOLS prüfen.");
-        return;
-      }
-  
-      // Finalen Satz von Symbolen pro Spalte bestimmen
-      const finalReelSymbols = reels.map((reel) => {
-        const reelLength = reel.length;
-  
-        // Einen Index für Scatter wählen (z. B. immer 1), um Zufälligkeiten auszuschließen:
-        const scatterIndex = 1; // Hardcodieren Sie diesen Wert, um jede Unsicherheit zu eliminieren
-  
-        const chosenSymbols = [];
-        for (let i = 0; i < reelLength; i++) {
-          if (i === scatterIndex) {
-            chosenSymbols.push(scatterSymbol);
-          } else {
-            // Immer das erste Non-Scatter Symbol nehmen, um jegliche Randomness zu vermeiden
-            chosenSymbols.push(nonScatterSymbols[0]);
-          }
-        }
-  
-        // Überprüfen: Es darf nur 1 Scatter geben
-        const scatterCount = chosenSymbols.filter(sym => sym.alt === 'scatter').length;
-        if (scatterCount > 1) {
-          console.error("Mehr als ein Scatter in einer Spalte generiert!", chosenSymbols);
-        }
-  
-        return chosenSymbols;
-      });
-  
+
       spinControlRef.current = animateReels(
         reels,
-        (reel, reelIndex) => {
-          // KEINE neue Logik, KEIN Zufall. Nur finalReelSymbols einsetzen.
-          finalReelSymbols[reelIndex].forEach((symbol, i) => {
-            reel[i].innerHTML = `<img src="${symbol.src}" alt="${symbol.alt}" />`;
+        (reel) => {
+          reel.forEach((el) => {
+            const newElement = getRandomElement();
+            el.innerHTML = `<img src="${newElement.src}" alt="${newElement.alt}" />`;
           });
         },
         (totalWins, combos, newScatterState) => {
           setScatterState(newScatterState);
           handleWinnings(combos);
-  
+
           if (totalWins > 0) {
             if (totalWins > 1) {
               if (isAutoPlayEnabledRef.current) {
@@ -293,21 +253,21 @@ function SlotMachine() {
               setIsSpinning(false);
               setIsAnimating(false);
               setCooldownActive(false);
-  
+
               if (spinControlRef.current?.stop) {
                 spinControlRef.current.stop();
                 spinControlRef.current = null;
               }
-  
+
               resolve();
               return;
             }
             playWinSound();
           }
-  
+
           if (!newScatterState.teasingColumns.size) {
             setIsSpinning(false);
-  
+
             setTimeout(
               () => {
                 setIsAnimating(false);
@@ -320,7 +280,7 @@ function SlotMachine() {
         }
       );
     });
-  }  
+  }
 
   const toggleAutoPlay = () => {
     setIsAutoPlayEnabled((prev) => !prev);
